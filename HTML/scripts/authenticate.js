@@ -2,8 +2,18 @@
 (function($){
     "use strict";
     $(document).ready(function(){
-    const SERVER_IP = "3.229.152.95:3001";
-    // const SERVER_IP = "localhost:3001";
+    // const SERVER_IP = "3.229.152.95:3001";
+    const SERVER_IP = "localhost:3001";
+
+    function ValidateEmail(mail)
+    {
+        if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail))
+        {
+            return (true)
+        }
+            // alert("You have entered an invalid email address!")
+            return (false)
+    }
     
     /*----------------------------------------------------*/
     /*  Login and register
@@ -11,10 +21,15 @@
     function loginFunc() {
         let email = document.getElementById("username").value;
         let password = document.getElementById("password").value;
+        if(!ValidateEmail(email)){
+            window.popup('Email is not valid','errorPopup');
+            return;
+        }
         if( !(email && password)){
             console.log('Data is not given');
             return;
         }
+        email = email.split('@')[0]+'@' + email.split('@')[1].toLowerCase();
 
         $.ajax({
             url: "http://"+SERVER_IP+"/user/login/",
@@ -27,13 +42,13 @@
             error: function (data) {
                 // alert('error');
                 if(! data.responseJSON){
-                    window.popup("No active internet connection","errorPopup");
+                    window.popup("Something went wrong","errorPopup");
                     return;
                 }
                 if(data.responseJSON['verified']===false){
                     window.popup('Verify your email to login',"errorPopup");
                 }else{
-                    let mes= data.responseJSON['message'] || "No active internet connection";
+                    let mes= data.responseJSON['message'] || "Something went wrong";
                     window.popup(mes,"errorPopup");
                 }
                 console.log(data);
@@ -61,16 +76,6 @@
             loginFunc();
         }
     });
-
-    function ValidateEmail(mail)
-    {
-        if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail))
-        {
-            return (true)
-        }
-            // alert("You have entered an invalid email address!")
-            return (false)
-    }
 
     function isEmail(email){
         if(! ValidateEmail(email)){
@@ -115,6 +120,8 @@
             window.popup('Passwords didn\'nt match','errorPopup');
             return;
         }
+        email = email.split('@')[0]+ '@' + email.split('@')[1].toLowerCase();
+
         $.ajax({
             url: "http://"+SERVER_IP+"/user/signup/",
             type: "POST",

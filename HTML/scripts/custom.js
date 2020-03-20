@@ -4,36 +4,32 @@
     var sessionInfo = JSON.parse(localStorage.getItem('sessionInfo') || "{}");
     var profileInfo = JSON.parse(localStorage.getItem('profileInfo') || false);
 
-    // if(sessionInfo['userId']===undefined){
-    //     let dshbd = $('#responsive');
-    //     dshbd.children()[3].style.display = 'none'
-    // }
-    // if(sessionInfo['type']=='applicant'){
-    //     $("#dashboard > div.dashboard-nav > div > ul:nth-child(2) > li:nth-child(1) > a").hide();
-    //     $('#responsive > li:nth-child(4) > ul > li:nth-child(6)').hide();
-    //     $('#responsive > li:nth-child(4) > ul > li:nth-child(5)').hide();
-
-    // }else{
-    //     $("#dashboard > div.dashboard-nav > div > ul:nth-child(2) > li:nth-child(2) > a").hide();
-    // }
     $(document).ready(function(){
-    const SERVER_IP = "3.229.152.95:3001";
-    // const SERVER_IP = "localhost:3001";
+    // const SERVER_IP = "3.229.152.95:3001";
+    const SERVER_IP = "localhost:3001";
     const success = "successPopup";
     const error = "errorPopup";
+    const rlimit = 15;
+    const jlimit = 25;
+    const alimit = 10;
 
     window.SERVER_IP = SERVER_IP;
     /*----------------------------------------------------*/
     /*  Checking if user is alreaady logged in
     /*----------------------------------------------------*/
     $('body')[0].innerHTML+='<div id="snackbar">Some text some message..</div>';
-    $('body')[0].innerHTML+="<div id='popupAlert'><div class='header'><span class='data' style='display:none'>here is data</span> Confirm action </div><div class='message'>You have not purchased this CV.<br>Do you want to purchase this CV ?</div><button  class='confirm'>OK</button><button class='close'>close</button></div><div class='fill'><div class='loader'></div></div>"
+    $('body')[0].innerHTML+="<div class='pmessage'><div id='popupAlert'><div class='header'><span class='data' style='display:none'>here is data</span> Confirm action </div><div class='message'>You have not purchased this CV.<br>Do you want to purchase this CV ?</div><button  class='confirm'>OK</button><button class='close'>close</button></div></div><div class='fill'><div class='loader'></div></div>"
     
     $("#popupAlert .close").click(()=>{
         console.log("Calling");
-        $("#popupAlert").removeClass('showele');
+        $(".pmessage").removeClass('showele');
     })
+
+    function state(title,url){
+        window.history.pushState(null,title,url);
+    }
     // $('#popupAlert').addClass('showele');
+
     class Loader{
         constructor(){
             this.tag = $('.fill');
@@ -66,7 +62,6 @@
     const userType = sessionInfo['type'] || 'applicant';
 
     function isNumber(evt){
-        // console.log("Coming");
         evt = (evt) ? evt : window.event;
         var charCode = (evt.which) ? evt.which : evt.keyCode;
         if (charCode > 31 && (charCode < 48 || charCode > 57)) {
@@ -101,8 +96,6 @@
         setProgress(input);
     }
     progressCircle();
-    
-
 
     if(email!="" || username!=""){
         let nameu;
@@ -125,7 +118,6 @@
         nav.children[1].innerHTML='<li><img style="max-width:40px;border-radius:50%;min-height:40px;" src="'+image+'" alt="img"></li><li style="margin-top: 5%;margin-right: 10px;">Welcome, '+nameu+'</li><li><button id="logout" class="logout" style="border-radius:5px">Log Out</button></li>';
     }
     nav.children[1].classList.add("showele");
-    // nav.style.visibility="hidden";
     if(sessionInfo.type=='applicant'){
         $('#responsive > li:nth-child(4)')[0].remove();
         $("#pjob,#fresumes").remove();
@@ -146,9 +138,11 @@
             localStorage.removeItem('profileInfo');
             localStorage.removeItem('resumeList');
             localStorage.removeItem("userPostedJobs");
+            localStorage.removeItem('searchedJobs');
+            localStorage.removeItem('searchedResumes');
             window.location="./index.html";
     });
-    var currency_symbols = {
+    const currency_symbols = {
         'USD': '$', // US Dollar
         'EUR': '€', // Euro
         'CRC': '₡', // Costa Rican Colón
@@ -165,6 +159,35 @@
         'UAH': '₴', // Ukrainian Hryvnia
         'VND': '₫', // Vietnamese Dong
     };
+
+    // Functions to change frontend based on user role
+
+    //For index.html
+
+    (()=>{
+        if($('#iKeyword').length){
+            let b=document.getElementsByClassName('indexMore');
+            let k=document.querySelector('#iKeyword');
+            if(userType=="recruiter"){
+                console.log('Index.html');
+                $('#indexTitle').text("Find Resume");
+                $('#indexRecent').text("Recent Resumes");
+                let but = $('.indexMore');
+                if(but.length){
+                    but[0].innerHTML = '<i class="fa fa-plus-circle"></i>Show more resumes';
+                    but[0].href="./browse-resumes.html";
+                }
+                b[0].innerHTML = b[0].innerHTML.replace(/Jobs/,'Applicantions')
+                k.placeholder = "title, keywords"
+                $('.adSearch > a').attr('href','./browse-resumes.html')
+            }else{
+                $('#indexTitle').text("Find Job");
+                $('#indexRecent').text("Recent Jobs");
+                k.placeholder = "job title, keywords or company name";
+            } 
+        }
+    })();
+    // $('indexTi')
 
     /*----------------------------------------------------------------*/
     /*  Change password                                               */
@@ -310,7 +333,7 @@
                     popup("Profile Update failed",error);
                     console.log(err);
                 },
-                success: function (data) { //callback   
+                success: function (data) { //callback
                     console.log('profile posted successfull');
                     // localStorage.setItem('profileInfo', JSON.stringify(data) );
                     console.log(data);
@@ -376,7 +399,7 @@
             fd.append("professionalTitle",  inpts[4].value);
             fd.append("region",  inpts[5].value);
             fd.append("url",  inpts[6].value);
-            fd.append("experience",  inpts[7].value);
+            fd.append("experience",  Number(inpts[7].value || 0) );
             fd.append("category",  'full time');
             fd.append("skills",  inpts[9].value);
             fd.append("education",  inpts[10].value);
@@ -419,6 +442,7 @@
     })
 
     $('#profile_expSalPerYear,#profile_expSalPerHour').keypress(isNumber);
+    $("#profile_exp").keypress(isNumber);
 
     if(sessionInfo['userId']!=undefined && !profileInfo){
         console.log("inside");
@@ -450,6 +474,9 @@
 
     function showJobs(jobs){
         // console.log('In showjobs');
+        if(userType!='applicant'){
+            return;
+        }
         if(!loc.match("browse-jobs.html")){
             jobs=jobs.slice(0,10);
         }
@@ -552,10 +579,14 @@
             });
             // jobsContainer[0].innerHTML=container;
         }
+        $(".current-page").text(jpage)
 
     }
 
     function updateJobsinDB(){
+        if(userType=="recruiter"){
+            return;
+        }
         $.ajax({
                 url: "http://"+SERVER_IP+"/jobs/",
                 type: "GET",
@@ -563,10 +594,8 @@
                 error: function (error) {
                     console.log(error);
                 },
-                success: function (data, tesxtSatus,xhr) { //callback   
-                    console.log(data,tesxtSatus,xhr);
+                success: function (data) { //callback   
                     console.log('Jobs are stored');
-                    localStorage.setItem('last_updated',new Date());
                     localStorage.setItem('jobsInfo', JSON.stringify(data) );
                     jobsInfo = data;
                     if(!loc.match("browse-jobs.html"))
@@ -576,160 +605,133 @@
             });
     }
 
-    var consideringJobs = jobsInfo['jobs'];
 
-    // function updateConsideringJobs(){
-    //     let tempJobs = jobsInfo['jobs'];
-    //     if(){
-
-    //     }
-    // }
-        // var a = [[12, 'AAA'], [58, 'BBB'], [28, 'CCC'],[18, 'DDD']];
-
-    // a.sort(sortFunction);
-
-    function ratehight(a, b) {
-        if (a['maximumsalary'] === b['maximumsalary']) {
-            return 0;
-        }
-        else {
-            return (a['maximumsalary'] > b['maximumsalary']) ? -1 : 1;
-        }
-    }
-    function ratelowt(a, b) {
-        if (a['maximumsalary'] === b['maximumsalary']) {
-            return 0;
-        }
-        else {
-            return (a['maximumsalary'] < b['maximumsalary']) ? -1 : 1;
-        }
-    }
-
-    function applyFilters(jobs){
-        try{
-            const sortFilter = $("#sortJobFilter")[0].value || 'recent';
-            let anyType  = $("#check-1")[0].checked;
-            let fullT = $('#check-2')[0].checked;
-            let partT = $('#check-3')[0].checked;
-            let intern = $('#check-4')[0].checked;
-            let freelance = $('#check-5')[0].checked;
-            let contract = $('#check-12')[0].checked;
-            
-            let filterdJobs = [];
-            jobs.forEach(job=>{
-                if(anyType ){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-                }
-                if(fullT && job['jobType']=='full time' ){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-                }
-                if(partT && job['jobType']=='part time'){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-    
-                }
-                if(intern && job['jobType']=='internship'){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-                }
-                if(freelance && job['jobType']=='freelance'){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-                }
-                if(contract && job['jobType']=='contract'){
-                    filterdJobs = filterdJobs.concat(job)
-                    return;
-                }
-            })
-            if(sortFilter == 'recent'){
-                return filterdJobs
-            }else if(sortFilter == 'oldest'){
-                filterdJobs.reverse();
-                return filterdJobs;
-            }else if(sortFilter == 'ratehigh'){
-                filterdJobs.sort(ratehight);
-                return filterdJobs;
-            }else if(sortFilter == 'ratelow'){
-                filterdJobs.sort(ratelowt);
-                return filterdJobs;
-            }
-            return filterdJobs;
-        }
-        catch(err){
-            return jobs;
-        }
+    var jpage = 1;
+    let jlast_call = new Date();
+    function getJobSearchData(){
         
-    }
-    
+        let k = ($('#keyword')[0].value || '').trim();
+        let l = ($('#location')[0].value || '').trim();
+        let s = $("#sortJobFilter")[0].value || '';
+        let sort = "createdAt";
+        let sd = 1;
+        if(s=='recent' || s =="ratehigh" ){
+            sd = -1;
+        }
+        if(s.match(/rate/) ){
+            sort="maximumsalary";
+        }
+        let jt = [];
+        let cbs = $('input[type="checkbox"]');
+        for(let i=1;i<cbs.length;i++){
+            if(cbs[i].checked){
+                jt.push(cbs[i].value);
+            }
+        }
+        jt= jt.join(",")
+        return {
+                sort :sort,
+                sortDir :sd,
+                jobType: jt,
+                "keyword":k,
+                "location":l,
+                "page": jpage
+        }
 
-    function searchJobs(keyword,location=""){
-        // console.log("Coming");
-        let jobsStored = jobsInfo['jobs'];
-        // if( !(keyword || location)){
-        //     showJobs(jobsStored.slice(0,10));
-        //     return;
-        // }
-        keyword = keyword.toLowerCase();
-        location = location.toLowerCase();
-        if(jobsStored){
-            let jobsFound = [];
-            jobsStored.forEach(job=>{
-                if(job['location'].toLowerCase().match(location)){
-                    if(keyword==""){
-                        jobsFound = jobsFound.concat(job);
-                        return;
-                    }
-                    if(job['primaryResponsibilities'].toLowerCase().match(keyword)){
-                        jobsFound =jobsFound.concat(job);
-                        return
-                    }
-                    if(job['title'].toLowerCase().match(keyword)){
-                        jobsFound = jobsFound.concat(job);
-                        return;
-                    }
-                    if(job['companyName'].toLowerCase().match(keyword)){
-                        jobsFound = jobsFound.concat(job);
+    }
+    function getJobs(){
+        if(sessionInfo.type=="recruiter"){
+            popup("Only applicant is allowed",error);
+            return
+        }
+        if((new Date())- jlast_call < 1000 ){
+            return;
+        }
+        loader.start();
+        jlast_call = (new Date());
+        $.ajax({
+            url: "http://"+SERVER_IP+"/jobs/search/",
+            type: "POST",
+            headers:{
+                Authorization: "Bearer "+ sessionInfo['token'],
+            },
+            data:getJobSearchData(),
+            error: function (err) {
+                // alert('error');
+                popup( err.message || "Jobs fetch fail",error);
+                console.log(err);
+                loader.stop();
+            },
+            success: function (data) { //callback   
+                console.log(data);
+                loader.stop();
+                jlast_call = (new Date());
+                if(! data.jobs.length){
+                    if(jpage==1){
+                        popup("No jobs found",success);
+                    }else{
+                        popup("This is the last page",success);
                     }
                 }
-            });
-            // console.log("Jobs Found are");
-            consideringJobs = jobsFound;
-            jobsFound = applyFilters(jobsFound);
-            showJobs(jobsFound.slice(0,10));
-            console.log(jobsFound);
-            return jobsFound;
+                localStorage.setItem('searchedJobs',JSON.stringify(data.jobs || '[]'));
+                showJobs(data.jobs || []);
+                jobsInfo = data || {};
+            }
+        });
+    }
+    
+    let jPrevState = "";
+    if(loc.match(/browse-jobs.html/)){
+        jPrevState = JSON.stringify(getJobSearchData());
+    }
+    function advancedSearchJobs(){
+        if(!sessionInfo.userId){
+            popup("Login to use advance search",error);
+            return;
         }
+        let s = JSON.stringify(getJobSearchData());
+        if(jPrevState == s){
+            return;
+        }
+        jPrevState = s;
+        getJobs();
     }
     
     let ele1 = $("#keyword,#location");
     $('#sortJobFilter').change(e=>{
-        setTimeout(()=>{showJobs(applyFilters(consideringJobs));},200);
+        advancedSearchJobs();
     });
 
     $("#check-1,#check-2,#check-3,#check-4,#check-5,#check-12").click((event)=>{
-        setTimeout(()=>{showJobs(applyFilters(consideringJobs));},200);
-        // setTimeout(()=>{searchJobs(ele1[0].value,ele1[1].value);},200);
+        setTimeout(()=>{advancedSearchJobs();},200);
+
     })
 
     ele1.keypress(e=>{
         if(e.which==13){
-            let keyword = ele1[0].value ;
-            let location = ele1[1].value;
-            // console.log(keyword || 'N/A',location || 'N/A');
-            // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-            searchJobs(keyword,location);
+            advancedSearchJobs();
         }
     })
     $('#jobSearchButton1').click(e=>{
-        let keyword = ele1[0].value ;
-        let location = ele1[1].value;
-        // console.log(keyword || 'N/A',location || 'N/A');
-        // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-        searchJobs(keyword,location);
+        advancedSearchJobs();
     });
-
+    $(".jprev").click(e=>{
+        if(jpage<2){
+            return;
+        }else{
+            jpage-=1;
+            advancedSearchJobs();
+        }
+    })
+    $(".jnext").click(e=>{
+        if(jobsInfo['jobs'].length<jlimit){
+            popup("Last Page",success);
+        }else{
+            jpage+=1;
+            advancedSearchJobs();
+        }
+        
+    })
     if(loc.match("browse-jobs.html")){
         let params = getUrlVars();
         // consideringJobs
@@ -737,10 +739,8 @@
         let keyword = params['key'] ;
         let loc = params['loc'];
         if(keyword || loc){
-            consideringJobs = searchJobs(keyword,loc);
         }else{
-            consideringJobs = jobsInfo['jobs'] || [];
-            showJobs(consideringJobs.slice(0,limit));
+            showJobs(jobsInfo['jobs'])
         }
 
     }
@@ -771,32 +771,7 @@
     });
 
     // $(".pagination-next-prev ");
-    var page=1;
-    console.log(consideringJobs);
-    var maxJobs = consideringJobs.length;
-
-    $("#jobInfoTag").text("we found "+maxJobs+" jobs");
-
-
-    // functions showJobsByPage(){
-    //     showjobs(consideringJobs)
-    // }
-
-    $(".pagination-next-prev li:nth-child(1)").click(function(event){
-        if(page>1){
-            page = page - 1;
-            showJobs(consideringJobs.slice( (page-1)*limit ,(page*limit) ));
-            $(".pagination-container .pagination li a").text(page);
-        }
-    })
-
-    $(".pagination-next-prev li:nth-child(2)").click(function(event){
-        if(page*limit< maxJobs && maxJobs < (page+1)*limit ){
-            showJobs(consideringJobs.slice(page*limit ,(page*limit)+limit ));
-            page = page+1;
-            $(".pagination-container .pagination li a").text(page);
-        }
-    })
+    
 
     function findJobByIdinServer(jobId){
         $.ajax({
@@ -810,56 +785,22 @@
                     console.log('Got the job');
                     console.log(data);
                     addFullJobDescription(data['job']);
-                    // if(jobsInfo['jobs']){
-                    //     jobsInfo['jobs'] = jobsInfo['jobs'].concat();
-                    // }else{
-
-                    // }
-                    // localStorage.setItem('last_updated',new Date());
-                    // localStorage.setItem('jobsInfo', JSON.stringify(data) );
-                    // jobsInfo = data;
                 }
 
             });
     }
 
     function findJobById(jobId){
-        if(jobsInfo['jobs']){
-            for(let i=0;i<jobsInfo['jobs'].length;i++){
-                if(jobsInfo['jobs'][i]["_id"] == jobId){
-                    return jobsInfo['jobs'][i];
+        if(true){
+            let jobsToSearch = (jobsInfo['jobs'] || []).concat(JSON.parse( localStorage.getItem('searchedJobs') || '[]' ))
+            for(let i=0;i<jobsToSearch.length;i++){
+                if(jobsToSearch[i]["_id"] == jobId){
+                    return jobsToSearch[i];
                 }
             }
-            findJobByIdinServer(jobId);
         }
         return null
     }
-    
-    
-
-    var jobKeyword = document.getElementById('jobKeyword');
-    var jobLocation = document.getElementById('jobLocation');
-    function getSearchData(){
-        if(jobKeyword){
-            let data = jobKeyword.value;
-            let location = jobLocation.value;
-            if(data!="" || location!=""){
-                searchJobs(data,location);
-            }
-        }
-    }
-    let ele = $("#jobKeyword,#jobLocation");
-    ele.keypress(e=>{
-        if(e.which==13){
-            let keyword = ele[0].value ;
-            let location = ele[1].value;
-            // console.log(keyword || 'N/A',location || 'N/A');
-            // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-            searchJobs(keyword,location);
-        }
-    })
-
-    $('#jobSearchButton').click(getSearchData);
 
     /*----------------------------------------------------*/
     /*  job-page-alt.html page
@@ -867,7 +808,6 @@
     // var appliedResumes = JSON.parse(localStorage.getItem('appliedResume') || '[]');
     var appliedResumes = [];
     if(profileInfo){
-        // console.log(profileInfo);
         appliedResumes = profileInfo['data']['jobsApplied'] || [];
     }
     console.log(appliedResumes);
@@ -1053,6 +993,9 @@
         let params=loc.split('?');
         if(params.length>1){
             jobID = params[1];
+            if(jobID){
+                fetch("http://"+SERVER_IP+"/jobs/viewed/"+jobID);
+            }
             addFullJobDescription(params[1]);
         }
         $("input[type=file]").change(function(e)
@@ -1104,7 +1047,7 @@
         }
         // return;
         let name,mail,title,type,categories,location,jexp,tags,jobdesc,appUrl,closingDate,minRate,maxRate,minSal,maxSal,compName,compSite,compDesc;
-        let salaryType;
+        let salaryType,cursymbol;
         name = $("#jname")[0].value;
         mail = $("#jemail")[0].value;
         title = $("#jtitle")[0].value;
@@ -1260,8 +1203,9 @@
         }
     }
     const starClasses={0:"rating no-stars",1:"rating one-stars",2:"rating two-stars",3:"rating three-stars",4:"rating four-stars",5:"rating five-stars"};
+    
+    let resumeLimitSever = 0;
     function addApplication(appl,i){
-        console.log(appl);
         let resumeLink = appl.purchased? 'http://'+SERVER_IP+"/"+appl.resume:'#' ;
         let cla = "";
         if(resumeLink=="#"){
@@ -1269,6 +1213,12 @@
         }
         let appliedDate = appl.appliedOn ? (new Date(appl.appliedOn)).toDateString() :'Recent';
         let ratingStars ;
+        let emailData = ''
+        if(resumeLimitSever>0){
+            emailData='<span><a href="mailto:'+appl.applicantEmail+'">'+appl.applicantEmail+'</a></span>';
+        }else{
+            emailData='<span class="hideData">dummy@email.com</span>';
+        }
 
         let apl=`
                     <div class="application">
@@ -1279,7 +1229,7 @@
                         <img src="images/resumes-list-avatar-01.png" alt="">
                         <span>`+appl.applicantName+`</span>
                         <ul>
-                            <li class="`+cla+`" data-id="`+appl._id+`"><a data-id="`+appl._id+`" href="`+resumeLink+`" target="_blank"><i class="fa fa-file-text"></i> Download CV</a></li>
+                            <li class="`+cla+`" data-id="`+appl._id+`"><a data-id="`+appl._id+`" href="`+resumeLink+`" target="_blank"><i class="fa fa-file-text"></i> `+(appl.purchased ? "Open CV": "Download CV")+`</a></li>
                             
                         </ul>
                     </div>
@@ -1334,10 +1284,10 @@
                         <span>`+appl.applicantName+`</span>
 
                         <i>Email:</i>
-                        <span><a href="mailto:`+appl.applicantEmail+`">`+appl.applicantEmail+`</a></span>
+                        `+emailData+`
 
                         <i>Message:</i>
-                        <span>`+appl.applicantMessage+`</span>
+                        <span `+(resumeLimitSever>0 ? "" : "class='hideData'" )+`>`+(resumeLimitSever>0 ? appl.applicantMessage : "Buy a plan to view message" )+`</span>
                     </div>
 
                 </div>
@@ -1363,85 +1313,105 @@
         applicationdiv[0].innerHTML+=apl;
     }
 
-    function sortByDate(a,b){
-        if (a['appliedOn'] === b['appliedOn']) {
-            return 0;
-        }
-        else {
-            return (a['appliedOn'] > b['appliedOn']) ? -1 : 1;
-        }
-    }
-    function byName(a,b){
-        if (a['applicantName'] == b['applicantName']) {
-            return 0;
-        }
-        else {
-            return (a['applicantName'] > b['applicantName']) ? -1 : 1;
-        }
-    }
-    function byRating(a,b){
-        if (a['rating'] === b['rating']) {
-            return 0;
-        }
-        else {
-            return (a['rating'] > b['rating']) ? -1 : 1;
-        }
-    }
+
+    function applicationTab(){
+        // Get all the links.
+            var link = $(".app-link");
+            $('.close-tab').hide();
     
+            $('.app-tabs div.app-tab-content').hide();
+            // On clicking of the links do something.
+            link.on('click', function(e) {
+    
+                e.preventDefault();
+                $(this).parents('div.application').find('.close-tab').fadeOut();
+                var a = $(this).attr("href");
+                if($(this).hasClass('opened')) {
+                    $(this).parents('div.application').find(".app-tabs div.app-tab-content").slideUp('fast');
+                    $(this).parents('div.application').find('.close-tab').fadeOut(10);
+                    $(this).removeClass('opened');
+                } else {
+                    $(this).parents('div.application').find(".app-link").removeClass('opened');
+                    $(this).addClass('opened');
+                    $(this).parents('div.application').find(a).slideDown('fast').removeClass('closed').addClass('opened');
+                    $(this).parents('div.application').find('.close-tab').fadeIn(10);
+                }
+    
+                $(this).parents('div.application').find(".app-tabs div.app-tab-content").not(a).slideUp('fast').addClass('closed').removeClass('opened');
+                
+            });
+    
+            $('.close-tab').on('click',function(e){
+                $(this).fadeOut();
+                e.preventDefault();
+                $(this).parents('div.application').find(".app-link").removeClass('opened');
+                $(this).parents('div.application').find(".app-tabs div.app-tab-content").slideUp('fast').addClass('closed').removeClass('opened');
+            });
+        }
+    let apage = 1;
+    let appsInPage = 0;
+    function updateAppPagination(){
+        if(apage == 1 ){
+            $('#appPrev').addClass('noPage');
+        }else{
+            $("#appPrev").removeClass('noPage');
+        }
+        if(appsInPage == alimit){
+            $('#appNext').removeClass('noPage');
+        }else{
+            $("#appNext").addClass('noPage');
+        }
+        $("#appPage").text(apage);
+    }
+
+
     function applicantAdd(jobId = ''){
+        applicationdiv[0].innerHTML="";
         let item = 1;
         let type = [];
-        let applications = [];
-        console.log("Job id "+jobId);
-        let params = getUrlVars();
-        let sortV = params['s'] || 'new';
-        $('#appSort')[0].value = sortV;
-        let filterV = params['f'] || 'none';
-        $('#appFilter')[0].value = filterV;
-        if(filterV=='offer'){
-            filterV = 'offer extended';
+        let ajaxData = {
+            "appStatus":$('#appFilter')[0].value,
+            "sortBy":$('#appSort')[0].value,
+            "page":apage,
         }
-        filterV = filterV.toUpperCase();
-
-        userPostedJobs['job'].forEach(job=>{
-            if(jobId){
-                if(job._id == jobId){
-                    if(job.applicants.length){
-                        job.applicants.forEach(applicant=>{
-                            applications.push(applicant);
-                            
-                        })
-                    }
-                }
-                return;
-            }
-            if(job.applicants.length){
-                job.applicants.forEach(applicant=>{
-                    applications.push(applicant);
-                    
+        if(jobId){
+            ajaxData['jobId'] = jobId;
+        }
+        loader.start()
+        $.ajax({
+            url: "http://"+SERVER_IP+"/jobs/applicants",
+            type: "POST",
+            dataType: "json",
+            headers:{
+                Authorization: "Bearer "+sessionInfo['token'],
+            },
+            data: ajaxData,
+            error: function (error) {
+                console.log(error);
+                loader.stop();
+            },
+            success: function (data) { //callback  
+                resumeLimitSever = ( data.resumeLimit || 0 );
+                $('#resumeCount').text(resumeLimitSever);
+                appsInPage = ( data.applications || [] ).length;
+                ( data.applications || [] ).forEach(applicant=>{
+                    addApplication(applicant,item);
+                    type.push(applicant.applicationStatus.toLowerCase())
+                    item+=1;
                 })
+                applicationTab();
+                for(let i=1;i<=item;i++){
+                    $('#one-'+i+' > div:nth-child(1) > select').val(type[i-1]).trigger("chosen:updated");
+                }
+                $(".chosen-select-no-single").chosen({disable_search_threshold:10, width:"100%"});
+                eventHandsApp();
+                updateAppPagination();
+                loader.stop();
             }
-        });
-        applicantApp = applications;
-        if(sortV=='new'){
-            applications.sort(sortByDate);
-        }else if(sortV="name"){
-            applications.sort(byName);
-        }else if(sortV == 'rating'){
-            applications.sort(byRating);
-        }
-        applications.forEach(applicant=>{
-            if(filterV==applicant.applicationStatus || filterV=="NONE"){
-                addApplication(applicant,item);
-                type.push(applicant.applicationStatus.toLowerCase())
-                item+=1;
-            }
-        })
-        console.log(type)
-        for(let i=1;i<=item;i++){
-            $('#one-'+i+' > div:nth-child(1) > select').val(type[i-1]).trigger("chosen:updated");
-        }
+
+        });        
     }
+
 
     function eventHandsApp(){
         $(".applicationChanges").click((event)=>{
@@ -1539,39 +1509,64 @@
 
         $(".purchase").click((event)=>{
             event.preventDefault();
+            if(resumeLimitSever<1){
+                popup("Buy a plan to download CV",error);
+                return;
+            }
             let id = event.target.dataset.id;
             $("#popupAlert .confirm")[0].dataset.id = id;
-            $("#popupAlert").addClass("showele");
+            $(".pmessage").addClass("showele");
         });
 
     }
+    const urlVars = getUrlVars();
 
+    $('#appPrev').click(()=>{
+        if(apage <2){
+            // popup("")
+            return;
+        }
+        apage-=1;
+        let pa = getUrlVars();
+        if(pa['id']){
+            applicantAdd(pa['id']);
+        }else{
+            applicantAdd();
+        }
+    })
+    $('#appNext').click(e=>{
+        if(appsInPage==alimit){
+            apage+=1;
+            let pa = getUrlVars();
+            if(pa['id']){
+                applicantAdd(pa['id']);
+            }else{
+                applicantAdd();
+            }
+        }
+    });
 
 
     if(applicationdiv.length){
         applicationdiv[0].innerHTML="";
+
         if(userPostedJobs['job'].length){
             // console.log();
-            const urlVars =getUrlVars();
             applicantAdd(urlVars['id'] || '');
-
-            eventHandsApp();
+            if(urlVars['title']){
+                $("#appTitle").text(urlVars['title'])
+            }else{
+                $("#appTitle").text("For all posted jobs")
+            }
 
             $('#appSort,#appFilter').change(e=>{
                 // console.log(e.target.value);
                 let pa = getUrlVars();
-                let sv=$('#appSort')[0].value;
-                let fv=$('#appFilter')[0].value;
-                let s="";
-                let id = pa['id'];
-                if(id){
-                    s+= 'id='+id+'&';
+                if(pa['id']){
+                    applicantAdd(pa['id']);
+                }else{
+                    applicantAdd();
                 }
-                s+='s='+sv+"&f="+fv;
-                let u = window.location.href.split('?')[0];
-                console.log(s);
-                console.log(u);
-                window.location.href = u+'?'+s;
                 // applyAppFilnSort();
             })
             function addResumeToApplication(appId,resume){
@@ -1621,7 +1616,7 @@
                     success: function (data) { //callback   
                         console.log('Purchased successfully');
                         console.log(data);
-                        $("#popupAlert").removeClass("showele");
+                        $(".pmessage").removeClass("showele");
 
                         // localStorage.setItem('profileInfo', JSON.stringify(data) );
                         popup("Purchased successfully", success);
@@ -1686,9 +1681,9 @@
             let date_posted = Date.parse(userPostedJobs['job'][i].createdAt);
             date_posted = new Date(date_posted).toDateString();
             let date_expires  = userPostedJobs['job'][i].closeDate || "N/A";
-            let applicants = userPostedJobs['job'][i]['applicants'].length;
+            let applicants = userPostedJobs['job'][i]['applicants'];
             if(applicants){
-                applicants = `<a href="dashboard-manage-applications.html?id=`+jobId+`" class="button">Show (`+applicants+`)</a>`;
+                applicants = `<a href="dashboard-manage-applications.html?id=`+jobId+`&title=`+title+`" class="button">Show (`+applicants+`)</a>`;
             }else{
                 applicants = '-'
             }
@@ -1735,7 +1730,7 @@
             loader.start();
         }
         $.ajax({
-                url: "http://"+SERVER_IP+"/jobs/applications",
+                url: "http://"+SERVER_IP+"/jobs/posted",
                 type: "POST",
                 dataType: "json",
                 headers:{
@@ -1933,13 +1928,20 @@
          }
     }
     if($("#totalJobViews").length){
-        
+        if(userPostedJobs['job']){
+            let v=0;
+            userPostedJobs['job'].forEach(job=>{
+                v += job.views;
+
+            })
+            $("#totalJobViews")[0].innerText = v;
+        }
     }
     if($("#totalAppl").length){
         if(userPostedJobs['job']){
             let c = 0;
             userPostedJobs['job'].forEach(job=>{
-                c += job['applicants'].length;
+                c += job['applicants'];
             })
             console.log(c);
             $("#totalAppl")[0].innerText = c;
@@ -1973,17 +1975,14 @@
 
     const resumeListContainer = $("#resume-list");
     let resumeList = JSON.parse(localStorage.getItem('resumeList') || '{}')
-    let searchedResumes = [];
-    let filterdResumes = [];
 
     function showResumes(resumes){
         if(!resumeListContainer[0]){
             return;
         }
-        $('#resumeCountTag').text("We've found "+filterdResumes.length+" resumes for:")
         let dat = '';
         resumes.forEach(resume=>{
-            if(resume['fullName'] && resume['email'] && resume['aboutMe'] && resume['skills']){
+            if(resume['fullName'] && resume['skills']){
                 let skills = resume.skills.split(",");
                 let imgsrc = "images/resumes-list-avatar-01.png";
                 if(resume.image){
@@ -2023,185 +2022,123 @@
         })
         resumeListContainer[0].innerHTML=dat;
     }   
-    function ratehigh(a, b) {
-        if (a['salaryperyear'] === b['salaryperyear']) {
-            return 0;
+    
+    var rpage = 1;
+    let rlast_call = new Date();
+    function getResumeSearchData(){
+        
+        let k = $('#rkeyword')[0].value || '';
+        let l = $('#rlocation')[0].value || '';
+        let s = $("#sortFilterResume")[0].value || '';
+        let skills = ($("#rskills")[0].value || '').split(",").reduce((a,e)=>{ if(e){ return a.concat(e) } return a},[]);
+        let expCodes = $('#rexp').val();
+        return {
+            "skills":skills,
+            "expCodes":expCodes,
+            "keyword":k,
+            "sortBy":s,
+            "location":l,
+            "page":rpage
         }
-        else {
-            return (a['salaryperyear'] > b['salaryperyear']) ? -1 : 1;
-        }
+
     }
-    function ratelow(a, b) {
-        if (a['salary'] === b['salary']) {
-            return 0;
+    function getResumes(){
+        if(sessionInfo.type!="recruiter"){
+            popup("Only recruiters are allowed",error);
+            return
         }
-        else {
-            return (a['salary'] < b['salary']) ? -1 : 1;
+        if((new Date())-rlast_call < 1000 ){
+            return;
         }
-    }
-    const sortFilterResumeVar = $('#sortFilterResume');
-    function applySortinResumes(){
-        let selectedValue = sortFilterResumeVar[0].value;
-        console.log(selectedValue)
-        if(selectedValue == 'recent'){
-            // filterdResumes = resumeList['resumes'];
-            showResumes(filterdResumes.slice(startIndex,startIndex+limit));
-        }else if(selectedValue=='ratehigh'){
-            // let temp = [...filterdResumes]
-            filterdResumes.sort(ratehigh);
-            showResumes(filterdResumes.slice(startIndex,limit));
-        }else if(selectedValue=='ratelow'){
-            // showResumes();
-            filterdResumes.sort(ratelow);
-            showResumes(filterdResumes.slice(startIndex,startIndex+limit));
-        }
-    }
-
-    function getFilterSkills(){
-        const skillTag = $('#rskilltag')
-        let skills = []
-        skillTag[0].selectedOptions
-        for(let i=0;i<skillTag[0].selectedOptions.length;i++){
-            // console.log(skillTag[0].selectedOptions[i]);
-            skills.push(skillTag[0].selectedOptions[i].value)
-        }
-        // console.log(skills)
-        return skills
-    }
-
-    function isPresent(selskills,rskills){
-
-        for(let i=0;i<rskills.length;i++){
-            if(selskills.indexOf(rskills[i]) != -1 ){
-                return true
-            }
-        }
-        return false
-    }
-
-    function applyResumeFilters(resumes){
-        const skills = getFilterSkills();
-        let anyRate = $("#check-6")[0].checked;
-        let ztfRate = $("#check-7")[0].checked;
-        let tffRate = $("#check-8")[0].checked;
-        let fhdRate = $("#check-9")[0].checked;
-        let hdthdRate = $("#check-10")[0].checked;
-        let thdPRate = $("#check-11")[0].checked;
-        let aresumes = []
-        resumes.forEach(resume=>{
-            let rskills = []
-            let s=resume['skills'] || '';
-            s.split(',').forEach(skill=>{
-                rskills.push(skill.toLowerCase())
-            })
-            if( skills.length==0 || isPresent(skills,rskills)){
-                let r = resume['salaryperhour'] || 15;
-                if(anyRate){
-                    aresumes.push(resume)
-                    return;
-                }
-                if (ztfRate && (r>=0 && r<=25) ) {
-                    aresumes.push(resume);
-                    return;
-                }
-                if(tffRate && (r>=25 && r<=50) ){
-
-                    aresumes.push(resume)
-                    return;
-                }
-                if (fhdRate && (r>=50 && r<=100) ) {
-                    aresumes.push(resume);
-                    return;
-                }
-                if(hdthdRate && (r>=100 && r<=200) ){
-                    aresumes.push(resume);
-                    return;
-                }
-                if (thdPRate && (r>200) ) {
-                    aresumes.push(resume);
-                    return;
-                }
-            }
-            
-        })
-        return aresumes;
-    }
-
-    function searchResumes(keyword='', location=''){
-        let resumesStored = resumeList['resumes'];
-        keyword = keyword.toLowerCase();
-        location = location.toLowerCase();
-        if(resumesStored){
-            let resFound = [];
-            resumesStored.forEach(resume=>{
-                if(resume['region'] && resume['professionalTitle']){
-
-                    if(resume['region'].toLowerCase().match(location)){
-                        if(keyword==""){
-                            resFound = resFound.concat(resume);
-                            return;
-                        }
-                        if(resume['professionalTitle'].toLowerCase().match(keyword)){
-                            resFound =resFound.concat(resume);
-                            return
-                        }
+        loader.start();
+        $.ajax({
+            url: "http://"+SERVER_IP+"/profile/resumes",
+            type: "POST",
+            headers:{
+                Authorization: "Bearer "+ sessionInfo['token'],
+            },
+            data:getResumeSearchData(),
+            error: function (err) {
+                // alert('error');
+                popup("Resumes fetch fail",error);
+                console.log(err);
+                loader.stop();
+            },
+            success: function (data) { //callback   
+                loader.stop();
+                rlast_call = (new Date());
+                if(! data.resumes.length){
+                    if(rpage==1){
+                        popup("No resumes found",success);
+                    }else{
+                        popup("This is the last page",success);
                     }
                 }
-
-            });
-            searchedResumes = resFound;
-            filterdResumes = resFound;
-            // console.log(resFound);
-            resFound = applyResumeFilters(resFound);
-            showResumes(resFound.slice(0,10));
-            // console.log(resFound);
-            return resFound;
-        }
-
+                localStorage.setItem('searchedResumes',JSON.stringify(data.resumes));
+                showResumes(data.resumes || []);
+                resumeList = data.resumes || [];
+            }
+        });
     }
-    $('#sortFilterResume').change(()=>{applySortinResumes()})
-    
     let rele = $('#rkeyword,#rlocation');
+    let rprevState = '';
+    function advancedSearchResumes(){
+        let k = $('#rkeyword')[0].value || '';
+        let l = $('#rlocation')[0].value || '';
+        let s = $("#sortFilterResume")[0].value || '';
+        let skills = ($("#rskills")[0].value || '').split(",").reduce((a,e)=>{ if(e){ return a.concat(e) } return a},[]);
+        let expCodes = $('#rexp').val();
+        let sstring = "?k="+k+"&l="+l+"&s="+s+"&skills="+skills.join(',')+"&exp="+expCodes.join(",");
+        if(rprevState==sstring){
+            return
+        }
+        rprevState = sstring
+        state("resume page",sstring);
+        getResumes();
+    }
+
+    $('#sortFilterResume').change(()=>{advancedSearchResumes()})
+    $('#resumeSearchButton1').click((e)=>{advancedSearchResumes()})
+    
     $('.filterResume').click(e=>{
-        console.log('comig')
-        let keyword = rele[0].value ;
-        let location = rele[1].value;
-        // console.log(keyword || 'N/A',location || 'N/A');
-        // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-        setTimeout(()=>{searchResumes(keyword,location)},300);
+        advancedSearchResumes();
     })
     rele.keypress(e=>{
         if(e.which==13){
-            let keyword = rele[0].value ;
-            let location = rele[1].value;
-            // console.log(keyword || 'N/A',location || 'N/A');
-            // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-            searchResumes(keyword,location);
+            advancedSearchResumes();
         }
     })
-    if(loc.match("browse-resumes.html")){
-        $('input[type="checkbox"]').click(e=>{
-            let keyword = rele[0].value ;
-            let location = rele[1].value;
-            // console.log(keyword || 'N/A',location || 'N/A');
-            // $(".searcherClass")[0].href="browse-jobs.html?key="+(keyword || '')+"&loc="+(location || '')+""
-            // searchResumes(keyword,location);
-            setTimeout(()=>{searchResumes(keyword,location)},300);
 
-        })
-    }
-
-   
+    //Pagination Resumes
+    $(".rprev").click(e=>{
+        if(rpage < 2){
+            return 0;
+        }else{
+            rpage-=1;
+            advancedSearchResumes();
+        }
+    })
+    $(".rnext").click(e=>{
+        if( (resumeList.length || 0) <rlimit){
+            popup("This is the last page",success);
+            return 0;
+        }else{
+            rpage+=1;
+            advancedSearchResumes();
+        }
+    })
     
 
     function searchResumeById(id){
         if(! id){
             return;
         }
-        if(resumeList['resumes']){
-            for(let i=0;i<resumeList['resumes'].length;i++){
-                if(resumeList['resumes'][i]['_id']==id){
-                    return resumeList['resumes'][i]
+        if(true){
+            let resumesToSearch = (resumeList['resumes'] || []).concat(JSON.parse(localStorage.getItem('searchedResumes') || '[]' ));
+            console.log('Resumes to search',resumesToSearch);
+            for(let i=0;i<resumesToSearch.length;i++){
+                if(resumesToSearch[i]['_id']==id){
+                    return resumesToSearch[i]
                 }
             }
             return false
@@ -2209,9 +2146,76 @@
 
     }
 
+    let DownloadedResumes = JSON.parse(localStorage.getItem('resumesDownloaded') || '{}');
+
+    function openUrlInNewPage(resume){
+        window.open('http://'+SERVER_IP+'/'+resume,'_blank');
+    }
+
+    function handleDownloadResume(){
+        let id = loc.split('?')[1];
+        if(DownloadedResumes[id]){
+            openUrlInNewPage(DownloadedResumes[id]);
+            return;
+        }
+        if(!sessionInfo.resumedownloadlimit){
+            popup('Purchase one of our plans to download,redirecting!!',error);
+            setTimeout(()=>{window.location.href="./pricing-tables.html"},3000);
+            return;
+        }
+        // let params = getUrlVars();
+        if(!id){
+            popup('No Id for resume found',error);
+            return
+        }
+        let url = "http://"+ SERVER_IP + "/profile/resume/"+id;
+        console.log(url);
+        loader.start()
+        $.ajax({
+            url: url,
+            type: "POST",
+            headers:{
+                Authorization: "Bearer "+ sessionInfo['token'],
+            },
+            data:{},
+            error: function (err) {
+                // alert('error');
+                popup("Profile Update failed",error);
+                console.log(err);
+                loader.stop();
+            },
+            success: function (data) { //callback   
+                console.log(data);
+                DownloadedResumes[id]=data.resume;
+                sessionInfo.resumedownloadlimit-=1;
+                localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo) );
+                localStorage.setItem('resumesDownloaded',JSON.stringify(DownloadedResumes))
+                loader.stop();
+                openUrlInNewPage(data.resume);
+                popup("Success", success);
+                // setTimeout(()=>{window.location.reload();},3000);
+            }
+
+        });
+        
+    }
+
+    $("#rdb").click(e=>{
+        handleDownloadResume();
+    })
+
     function showResumeInFullPage(id){
         let resume = searchResumeById(id);
+        if(userType != 'recruiter'){
+            popup("Page only should be viewed by recruiter",error);
+            return;
+        }
+        if(!sessionInfo.resumedownloadlimit){
+            $('.isbuyed').addClass('hideData');
+        }
         if(resume){
+            const dabtme = "This is preloaded dummy response I've been working in product for about a decade now. Most of my experience has been in e-commerce and retail, but I also have some SaaS experience. I'm passionate about creating long-term value for the customer, especially in the EdTech space. During my last project, I developed an online classroom environment for a media company, which we then used to sell video learning experiences (mostly workshops) to enterprise customers. I know that your company is developing similar online learning products, and I'd like to work with you on them"
+            const disOn = "onclick='event.preventDefault()'";
             console.log("resume Found");
             console.log(resume);
             if(resume.image){
@@ -2230,8 +2234,9 @@
             let dat =`
             <h4>`+resume['fullName']+`<span>`+(title || 'N/A')+`</span></h4>
             <span><i class="fa fa-map-marker"></i> `+(resume['region'] || 'N/A' )+`</span>
-            <span><i class="fa fa-money"></i> $`+(resume['salary'] || '10000')+` / year</span>
-            <span><i class="fa fa-envelope"></i> `+(resume['email'] || '10000')+`</span>
+            <span><i class="fa fa-money"></i> $`+(resume['salaryperyear'] || '10000')+` / year</span>
+            <span><i class="fa fa-money"></i> $`+(resume['salaryperhour'] || '10000')+` / hour</span>
+            <span><i class="fa fa-envelope"></i> <a class="`+(sessionInfo.resumedownloadlimit? '': 'hideData')+`" href="#" `+(sessionInfo.resumedownloadlimit? "": disOn)+` >`+(resume['email'] || 'dummyEmail@dum.com')+`</a></span>
             
 
             <div class="skills">
@@ -2240,12 +2245,63 @@
             <div class="clearfix"></div>
             `
             $("#resume-list2")[0].innerHTML = dat;
-            $('#raboutme')[0].innerText = resume['aboutMe'];
+            $('#raboutme')[0].innerText = resume['aboutMe'] || dabtme;
             $("#reducation")[0].innerText= resume['education'] || "Completed Degree with 70% aggregate";
             // $('#rName')[0].innerHTML = resume['fullName']+"<span>"+resume['professionalTitle']+"</span>"
 
         }
     }
+
+    function showResumesInIndexPage(resumes){
+        if( !(sessionInfo.type == 'recruiter' && loc.match(/index.html/)) ){
+            return;
+        }
+        console.log(resumes);
+        let indexList = $('.listings-container');
+        indexList[0].innerHTML = '';
+        let dat = `<ul class="resumes-list alternative" id="resume-list">`;
+        resumes.forEach(resume=>{
+            if(resume['fullName'] && resume['skills']){
+                let skills = resume.skills.split(",");
+                let imgsrc = "images/resumes-list-avatar-01.png";
+                if(resume.image){
+                 imgsrc = "http://"+SERVER_IP+"/"+resume.image;
+
+                }
+                let skillTag=""
+                skills.forEach(skill=>{
+                    skillTag+= "<span>"+skill+"</span>"
+                })
+                let title = resume['professionalTitle'];
+                if(title){
+                    title = title.toLowerCase().capitalize()
+                }
+                dat+=`
+                <li class="resumeList showele"><a href="resume-page.html?`+resume['_id']+`">
+                    <img src="`+imgsrc+`" alt="">
+                    <div class="resumes-list-content">
+                        <h4>`+resume['fullName']+`<span>`+(title || 'N/A')+`</span></h4>
+                        <span><i class="fa fa-map-marker"></i> `+(resume['region'] || 'N/A' )+`</span>
+                        <span><i class="fa fa-money"></i> $`+(resume['salaryperyear'] || '10000')+` / year</span>
+                        <span><i class="fa fa-money"></i> $`+(resume['salaryperhour'] || '15')+` / hr</span>
+                        <p>Over 8000 hours on Desk (only Drupal related). Highly motivated, goal-oriented, hands-on senior software engineer with extensive technical skills and over 15 years of experience in software development</p>
+
+                        <div class="skills">
+                            `+skillTag+`
+                        </div>
+                        <div class="clearfix"></div>
+
+                    </div>
+                    </a>
+                    <div class="clearfix"></div>
+                </li>
+
+                `
+            }
+        })
+        dat+=`</ul>`
+        indexList[0].innerHTML=dat;
+    }   
     function updateResumes(){
         if(sessionInfo.type=="recruiter"){
             $.ajax({
@@ -2259,27 +2315,21 @@
                     console.log(error);
                 },
                 success: function (data) { //callback   
-                    console.log('resumes are stored');
-                    console.log(data);
                     // localStorage.setItem('last_updated_uj',new Date());
                     localStorage.setItem('resumeList', JSON.stringify(data) );
                     resumeList = data;
-                    showResumes(data['resumes'].slice(0,10));
+                    showResumesInIndexPage(data['resumes'].slice(0,10));
                 }
 
             });
         }
     }
-
-    if(userType==='recruiter'){
-        let last_updated = Date.parse(localStorage.getItem('last_updated') || '01/01/2019');
-        let diff = (new Date()) - last_updated;
-        console.log( diff/1000 );
-        if(diff/1000 > REFRESH_TIME){
-            updateResumes();
+    if(loc.match(/index.html/) && sessionInfo.type == "recruiter") {
+        console.log('In index recruiter page');
+        if(resumeList.resumes){
+            showResumesInIndexPage(resumeList.resumes);
         }
     }
-
     if(loc.match("resume-page.html")){
         console.log("in reusme page");
         let params= loc.split('?');
@@ -2309,6 +2359,10 @@
                 ++count;
             }
         })
+        if(profileInfo['data']['resume']){
+            $("#MyResume")[0].href="http://"+SERVER_IP+"/"+profileInfo['data']['resume'];
+            $("#MyResume")[0].style.display="block";
+        }
         console.log( Object.keys(resume).length,count);
         setTimeout(()=>{window.setProgress((count/Object.keys(resume).length)*100)},500)
         if(resume){
@@ -2351,16 +2405,100 @@
 
     
     if(resumeListContainer.length){
-        console.log("In resumesFInd")
+        console.log("In resumesFInd");
         resumeList = JSON.parse(localStorage.getItem('resumeList') || '{}')
         if(resumeList.resumes){
-            filterdResumes = resumeList['resumes'];
-            showResumes(resumeList['resumes'].slice(startIndex,limit));
+            showResumes(resumeList['resumes']);
         }
         else{
         updateResumes();
+        }
     }
+
+    // Index page search handler
+    function getIndexPageResumes(data){
+        data = data || {};
+        $.ajax({
+            url: "http://"+SERVER_IP+"/profile/resumes",
+            type: "POST",
+            headers:{
+                Authorization: "Bearer "+ sessionInfo['token'],
+            },
+            data:data,
+            error: function (err) {
+                // alert('error');
+                loader.stop()
+                popup("Resumes fetch fail",error);
+
+                console.log(err);
+            },
+            success: function (data) { //callback   
+                loader.stop();
+                showResumesInIndexPage(data.resumes || []);
+
+                if(!resumeList.resumes){
+                    localStorage.setItem('resumeList',JSON.stringify(data));
+                }else{
+                    localStorage.setItem('searchedResumes',JSON.stringify(data.resumes));
+                }
+            }
+        });
     }
+    if(sessionInfo.type =="recruiter" && !localStorage.getItem('resumeList')){
+        getIndexPageResumes();
+    }
+    var iKeyword = document.getElementById('iKeyword');
+    var iLocation = document.getElementById('iLocation');
+    var istate = ""
+    function getSearchIndexData(){
+        let keyword = iKeyword.value;
+        let location = iLocation.value;
+        if(!sessionInfo.userId){
+            popup( err.message || "Login to use search",error);
+        }
+        let data ={
+            keyword:keyword,
+            location:location
+        }
+        if(istate==JSON.stringify(data)){
+            return;
+        }
+        istate =JSON.stringify(data);
+        if(sessionInfo.type=="recruiter"){
+            
+            loader.start();
+            getIndexPageResumes(data);
+        }else{
+            loader.start();
+            $.ajax({
+                url: "http://"+SERVER_IP+"/jobs/search/",
+                type: "POST",
+                headers:{
+                    Authorization: "Bearer "+ sessionInfo['token'],
+                },
+                data:data,
+                error: function (err) {
+                    // alert('error');
+                    console.log(err);
+                    loader.stop();
+                },
+                success: function (data) { //callback   
+                    loader.stop();                    
+                    showJobs(data.jobs || []);
+                    localStorage.setItem('searchedJobs',JSON.stringify(data.jobs));
+                }
+            });
+        }
+        
+    }
+    let iele = $("#iKeyword,#iLocation");
+    iele.keypress(e=>{
+        if(e.which==13){
+            getSearchIndexData()
+        }
+    })
+
+    $('#iSearchButton').click(getSearchIndexData);
 
 
     function updater(){
@@ -2369,14 +2507,17 @@
         // console.log( diff/1000 );
         if(diff/1000 < REFRESH_TIME){
             // updateResumes();
-            return
+            return;
         }
         console.log('Updater');
-        if(userType==='recruiter'){
+        if(userType=='recruiter'){
             updateResumes();
             updateUserPostedJobs();
         }
-        updateJobsinDB();
+        else{
+            updateJobsinDB();            
+        }
+        localStorage.setItem('last_updated',(new Date()));
     }
 
     setInterval(()=>{updater()},100*100);
@@ -2843,38 +2984,9 @@
     /*----------------------------------------------------*/
     /*  Application Tabs
     /*----------------------------------------------------*/   
-        // Get all the links.
-        var link = $(".app-link");
-        $('.close-tab').hide();
+        
 
-        $('.app-tabs div.app-tab-content').hide();
-        // On clicking of the links do something.
-        link.on('click', function(e) {
-
-            e.preventDefault();
-            $(this).parents('div.application').find('.close-tab').fadeOut();
-            var a = $(this).attr("href");
-            if($(this).hasClass('opened')) {
-                $(this).parents('div.application').find(".app-tabs div.app-tab-content").slideUp('fast');
-                $(this).parents('div.application').find('.close-tab').fadeOut(10);
-                $(this).removeClass('opened');
-            } else {
-                $(this).parents('div.application').find(".app-link").removeClass('opened');
-                $(this).addClass('opened');
-                $(this).parents('div.application').find(a).slideDown('fast').removeClass('closed').addClass('opened');
-                $(this).parents('div.application').find('.close-tab').fadeIn(10);
-            }
-
-            $(this).parents('div.application').find(".app-tabs div.app-tab-content").not(a).slideUp('fast').addClass('closed').removeClass('opened');
-            
-        });
-
-        $('.close-tab').on('click',function(e){
-            $(this).fadeOut();
-            e.preventDefault();
-            $(this).parents('div.application').find(".app-link").removeClass('opened');
-            $(this).parents('div.application').find(".app-tabs div.app-tab-content").slideUp('fast').addClass('closed').removeClass('opened');
-        });
+        applicationTab();
 
 
     /*----------------------------------------------------*/
